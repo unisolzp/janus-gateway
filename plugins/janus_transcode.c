@@ -342,7 +342,7 @@ static struct janus_json_parameter configure_parameters[] = {
 	{"video-bitrate-max", JSON_INTEGER, JANUS_JSON_PARAM_POSITIVE},
 	{"video-keyframe-interval", JSON_INTEGER, JANUS_JSON_PARAM_POSITIVE}
 };
-static struct janus_json_parameter record_parameters[] = {
+static struct janus_json_parameter transcode_parameters[] = {
 	{"name", JSON_STRING, JANUS_JSON_PARAM_REQUIRED | JANUS_JSON_PARAM_NONEMPTY},
 	{"id", JSON_INTEGER, JANUS_JSON_PARAM_POSITIVE},
 	{"filename", JSON_STRING, 0},
