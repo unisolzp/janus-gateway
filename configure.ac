@@ -158,6 +158,8 @@ AC_ARG_ENABLE([all-plugins],
                      [enable_plugin_lua=no])
                AS_IF([test "x$enable_plugin_recordplay" != "xyes"],
                      [enable_plugin_recordplay=no])
+               AS_IF([test "x$enable_plugin_transcode" != "xyes"],
+                     [enable_plugin_transcode=no])		     
                AS_IF([test "x$enable_plugin_sip" != "xyes"],
                      [enable_plugin_sip=no])
                AS_IF([test "x$enable_plugin_sipre" != "xyes"],
@@ -685,6 +687,13 @@ AC_ARG_ENABLE([plugin-recordplay],
                      [enable_plugin_recordplay=no])],
               [enable_plugin_recordplay=yes])
 
+AC_ARG_ENABLE([plugin-transcode],
+              [AS_HELP_STRING([--disable-plugin-transcode],
+                              [Disable transcode plugin])],
+              [AS_IF([test "x$enable_plugin_transcode" != "xyes"],
+                     [enable_plugin_transcode=no])],
+              [enable_plugin_transcode=yes])
+
 AC_ARG_ENABLE([plugin-sip],
               [AS_HELP_STRING([--disable-plugin-sip],
                               [Disable sip plugin])],
@@ -840,6 +849,7 @@ AM_CONDITIONAL([ENABLE_PLUGIN_DUKTAPE], [test "x$enable_plugin_duktape" = "xyes"
 AM_CONDITIONAL([ENABLE_PLUGIN_ECHOTEST], [test "x$enable_plugin_echotest" = "xyes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_LUA], [test "x$enable_plugin_lua" = "xyes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_RECORDPLAY], [test "x$enable_plugin_recordplay" = "xyes"])
+AM_CONDITIONAL([ENABLE_PLUGIN_TRANSCODE], [test "x$enable_plugin_transcode" = "xyes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_SIP], [test "x$enable_plugin_sip" = "xyes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_SIPRE], [test "x$enable_plugin_sipre" = "xyes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_NOSIP], [test "x$enable_plugin_nosip" = "xyes"])
@@ -1032,6 +1042,9 @@ AM_COND_IF([ENABLE_PLUGIN_VOICEMAIL],
 AM_COND_IF([ENABLE_PLUGIN_RECORDPLAY],
 	[echo "    Record&Play:           yes"],
 	[echo "    Record&Play:           no"])
+AM_COND_IF([ENABLE_PLUGIN_TRANSCODE],
+	[echo "    Transcode:           yes"],
+	[echo "    Transcode:           no"])
 AM_COND_IF([ENABLE_PLUGIN_TEXTROOM],
 	[echo "    Text Room:             yes"],
 	[echo "    Text Room:             no"])
