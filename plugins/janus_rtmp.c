@@ -1,13 +1,13 @@
 /*! \file   janus_rtmp.c
  * \author Lorenzo Miniero <lorenzo@meetecho.com>
  * \copyright GNU General Public License v3
- * \brief  Janus Record&Play plugin
+ * \brief  Janus Rtmp plugin
  * \details Check the \ref rtmp for more details.
  *
  * \ingroup plugins
  * \ref plugins
  *
- * \page rtmp Record&Play plugin documentation
+ * \page rtmp Rtmp plugin documentation
  * This is a simple application that implements two different
  * features: it allows you to record a message you send with WebRTC in
  * the format defined in recorded.c (MJR recording) and subsequently
@@ -42,9 +42,9 @@
  * 		audio = videoroom-audio.mjr
  * 		video = videoroom-video.mjr
  *
- * \section recplayapi Record&Play API
+ * \section recplayapi Rtmp API
  *
- * The Record&Play API supports several requests, some of which are
+ * The Rtmp API supports several requests, some of which are
  * synchronous and some asynchronous. There are some situations, though,
  * (invalid JSON, invalid request) which will always result in a
  * synchronous error response even for asynchronous requests.
@@ -276,8 +276,8 @@
 /* Plugin information */
 #define JANUS_RTMP_VERSION			4
 #define JANUS_RTMP_VERSION_STRING		"0.0.4"
-#define JANUS_RTMP_DESCRIPTION		"This is a trivial Record&Play plugin for Janus, to record WebRTC sessions and replay them."
-#define JANUS_RTMP_NAME				"JANUS Record&Play plugin"
+#define JANUS_RTMP_DESCRIPTION		"This is a trivial Rtmp plugin for Janus, to record WebRTC sessions and replay them."
+#define JANUS_RTMP_NAME				"JANUS Rtmp plugin"
 #define JANUS_RTMP_AUTHOR				"Meetecho s.r.l."
 #define JANUS_RTMP_PACKAGE			"janus.plugin.rtmp"
 
@@ -752,7 +752,7 @@ int janus_rtmp_init(janus_callbacks *callback, const char *config_path) {
 	handler_thread = g_thread_try_new("rtmp handler", janus_rtmp_handler, NULL, &error);
 	if(error != NULL) {
 		g_atomic_int_set(&initialized, 0);
-		JANUS_LOG(LOG_ERR, "Got error %d (%s) trying to launch the Record&Play handler thread...\n", error->code, error->message ? error->message : "??");
+		JANUS_LOG(LOG_ERR, "Got error %d (%s) trying to launch the Rtmp handler thread...\n", error->code, error->message ? error->message : "??");
 		return -1;
 	}
 	JANUS_LOG(LOG_INFO, "%s initialized!\n", JANUS_RTMP_NAME);
@@ -863,11 +863,11 @@ void janus_rtmp_destroy_session(janus_plugin_session *handle, int *error) {
 	janus_rtmp_session *session = janus_rtmp_lookup_session(handle);
 	if(!session) {
 		janus_mutex_unlock(&sessions_mutex);
-		JANUS_LOG(LOG_ERR, "No Record&Play session associated with this handle...\n");
+		JANUS_LOG(LOG_ERR, "No Rtmp session associated with this handle...\n");
 		*error = -2;
 		return;
 	}
-	JANUS_LOG(LOG_VERB, "Removing Record&Play session...\n");
+	JANUS_LOG(LOG_VERB, "Removing Rtmp session...\n");
 	janus_rtmp_hangup_media_internal(handle);
 	g_hash_table_remove(sessions, handle);
 	janus_mutex_unlock(&sessions_mutex);
@@ -1129,7 +1129,7 @@ void janus_rtmp_setup_media(janus_plugin_session *handle) {
 		if(error != NULL) {
 			janus_refcount_decrease(&session->ref);
 			/* FIXME Should we notify this back to the user somehow? */
-			JANUS_LOG(LOG_ERR, "Got error %d (%s) trying to launch the Record&Play playout thread...\n", error->code, error->message ? error->message : "??");
+			JANUS_LOG(LOG_ERR, "Got error %d (%s) trying to launch the Rtmp playout thread...\n", error->code, error->message ? error->message : "??");
 			gateway->close_pc(session->handle);
 		}
 	}
@@ -1392,7 +1392,7 @@ static void janus_rtmp_hangup_media_internal(janus_plugin_session *handle) {
 
 /* Thread to handle incoming messages */
 static void *janus_rtmp_handler(void *data) {
-	JANUS_LOG(LOG_VERB, "Joining Record&Play handler thread\n");
+	JANUS_LOG(LOG_VERB, "Joining Rtmp handler thread\n");
 	janus_rtmp_message *msg = NULL;
 	int error_code = 0;
 	char error_cause[512];
@@ -1862,7 +1862,7 @@ error:
 			janus_rtmp_message_free(msg);
 		}
 	}
-	JANUS_LOG(LOG_VERB, "LeavingRecord&Play handler thread\n");
+	JANUS_LOG(LOG_VERB, "LeavingRtmp handler thread\n");
 	return NULL;
 }
 
