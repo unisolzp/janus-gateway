@@ -14,7 +14,7 @@ bin_PROGRAMS = janus
 
 headerdir = $(includedir)/janus
 header_HEADERS = apierror.h config.h log.h debug.h mutex.h record.h \
-	rtcp.h rtp.h rtpsrtp.h sdp-utils.h ip-utils.h utils.h refcount.h text2pcap.h
+	rtcp.h rtp.h rtmp.h rtpsrtp.h sdp-utils.h ip-utils.h utils.h refcount.h text2pcap.h
 
 pluginsheaderdir = $(includedir)/janus/plugins
 pluginsheader_HEADERS = plugins/plugin.h
@@ -46,6 +46,9 @@ stream_DATA = $(NULL)
 recordingsdir = $(datadir)/janus/recordings
 recordings_DATA = $(NULL)
 
+rtmpdir = $(datadir)/janus/recordings
+rtmp_DATA = $(NULL)
+
 luadir = $(datadir)/janus/lua
 lua_DATA = $(NULL)
 
@@ -66,6 +69,7 @@ jsmodules_DATA = html/janus.js
 	    s|[@]transportdir[@]|$(transportdir)|;\
 	    s|[@]eventdir[@]|$(eventdir)|;\
 	    s|[@]recordingsdir[@]|$(recordingsdir)|;\
+	    s|[@]rtmpdir[@]|$(rtmpdir)|;\
 	    s|[@]demosdir[@]|$(demosdir)|;\
 	    s|[@]streamdir[@]|$(streamdir)|; \
 	    s|[@]luadir[@]|$(luadir)|; \
@@ -109,6 +113,8 @@ janus_SOURCES = \
 	rtcp.h \
 	rtp.c \
 	rtp.h \
+	rtmp.c \
+	rtmp.h \
 	rtpsrtp.h \
 	sctp.c \
 	sctp.h \
@@ -141,12 +147,16 @@ janus_CFLAGS = \
 	-DEVENTDIR=\"$(eventdir)\" \
 	-DCONFDIR=\"$(confdir)\" \
 	$(BORINGSSL_CFLAGS) \
+	$(POST_PROCESSING_CFLAGS) \
+	$(OPUS_CFLAGS) \
 	$(NULL)
 
 janus_LDADD = \
 	$(BORINGSSL_LIBS) \
 	$(JANUS_LIBS) \
 	$(JANUS_MANUAL_LIBS) \
+	$(POST_PROCESSING_LIBS) \
+	$(OPUS_LIBS) \
 	$(NULL)
 
 dist_man1_MANS = janus.1
@@ -403,6 +413,23 @@ EXTRA_DIST += \
 	conf/janus.plugin.recordplay.jcfg.sample.in \
 	$(recordings_DATA)
 CLEANFILES += conf/janus.plugin.recordplay.jcfg.sample
+endif
+
+if ENABLE_PLUGIN_RTMP
+plugin_LTLIBRARIES += plugins/libjanus_rtmp.la
+plugins_libjanus_rtmp_la_SOURCES = plugins/janus_rtmp.c
+plugins_libjanus_rtmp_la_CFLAGS = $(plugins_cflags)
+plugins_libjanus_rtmp_la_LDFLAGS = $(plugins_ldflags)
+plugins_libjanus_rtmp_la_LIBADD = $(plugins_libadd)
+conf_DATA += conf/janus.plugin.rtmp.jcfg.sample
+rtmp_DATA += \
+	plugins/rtmp/1234.nfo \
+	plugins/rtmp/rec-sample-audio.mjr \
+	plugins/rtmp/rec-sample-video.mjr
+EXTRA_DIST += \
+	conf/janus.plugin.rtmp.jcfg.sample.in \
+	$(rtmp_DATA)
+CLEANFILES += conf/janus.plugin.rtmp.jcfg.sample
 endif
 
 if ENABLE_PLUGIN_SIP
