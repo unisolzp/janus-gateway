@@ -1,26 +1,26 @@
 /*! \file   janus_transcode.c
  * \author Lorenzo Miniero <lorenzo@meetecho.com>
  * \copyright GNU General Public License v3
- * \brief  Janus Record&Play plugin
+ * \brief  Janus Transcode plugin
  * \details Check the \ref transcode for more details.
  *
  * \ingroup plugins
  * \ref plugins
  *
- * \page transcode Record&Play plugin documentation
+ * \page transcode Transcode plugin documentation
  * This is a simple application that implements two different
- * features: it allows you to record a message you send with WebRTC in
- * the format defined in recorded.c (MJR recording) and subsequently
- * replay this recording (or other previously recorded) through WebRTC
+ * features: it allows you to transcode a message you send with WebRTC in
+ * the format defined in transcodeed.c (MJR transcoding) and subsequently
+ * replay this transcoding (or other previously transcodeed) through WebRTC
  * as well. For more information on how Janus implements transcoding
  * natively and the MJR format, refer to the \ref transcoding documentation.
  *
- * This application aims at showing how easy recording frames sent by
- * a peer is, and how this recording can be re-used directly, without
+ * This application aims at showing how easy transcoding frames sent by
+ * a peer is, and how this transcoding can be re-used directly, without
  * necessarily involving a post-processing process (e.g., through the
  * tool we provide in janus-pp-rec.c). Notice that only audio and video
- * can be recorded and replayed in this plugin: if you're interested in
- * recording data channel messages (which Janus and the .mjr format do
+ * can be transcodeed and replayed in this plugin: if you're interested in
+ * transcoding data channel messages (which Janus and the .mjr format do
  * support), you should use a different plugin instead.
  *
  * The configuration process is quite easy: just choose where the
@@ -28,7 +28,7 @@
  * the available transcoding that can be replayed.
  *
  * \note The application creates a special file in INI format with
- * \c .nfo extension for each recording that is saved. This is necessary
+ * \c .nfo extension for each transcoding that is saved. This is necessary
  * to map a specific audio .mjr file to a different video .mjr one, as
  * they always get saved in different files. If you want to replay
  * transcoding you took in a different application (e.g., the streaming
@@ -37,14 +37,14 @@
  * folder to create a mapping, e.g.:
  *
  * 		[12345678]
- * 		name = My videoroom recording
+ * 		name = My videoroom transcoding
  * 		date = 2014-10-14 17:11:26
  * 		audio = videoroom-audio.mjr
  * 		video = videoroom-video.mjr
  *
- * \section recplayapi Record&Play API
+ * \section recplayapi Transcode API
  *
- * The Record&Play API supports several requests, some of which are
+ * The Transcode API supports several requests, some of which are
  * synchronous and some asynchronous. There are some situations, though,
  * (invalid JSON, invalid request) which will always result in a
  * synchronous error response even for asynchronous requests.
@@ -55,13 +55,13 @@
  * to scan the folder of transcoding again in case some were added manually
  * and not indexed in the meanwhile.
  *
- * The \c record , \c play , \c start and \c stop requests instead are
+ * The \c transcode , \c play , \c start and \c stop requests instead are
  * all asynchronous, which means you'll get a notification about their
- * success or failure in an event. \c record asks the plugin to start
- * recording a session; \c play asks the plugin to prepare the playout
- * of one of the previously recorded sessions; \c start starts the
+ * success or failure in an event. \c transcode asks the plugin to start
+ * transcoding a session; \c play asks the plugin to prepare the playout
+ * of one of the previously transcodeed sessions; \c start starts the
  * actual playout, and \c stop stops whatever the session was for, i.e.,
- * recording or replaying.
+ * transcoding or replaying.
  *
  * The \c list request has to be formatted as follows:
  *
@@ -76,11 +76,11 @@
 \verbatim
 {
 	"transcode" : "list",
-	"list": [	// Array of recording objects
-		{			// Recording #1
+	"list": [	// Array of transcoding objects
+		{			// Transcoding #1
 			"id": <numeric ID>,
-			"name": "<Name of the recording>",
-			"date": "<Date of the recording>",
+			"name": "<Name of the transcoding>",
+			"date": "<Date of the transcoding>",
 			"audio": "<Audio rec file, if any; optional>",
 			"video": "<Video rec file, if any; optional>",
 			"audio_codec": "<Audio codec, if any; optional>",
@@ -119,33 +119,33 @@
 }
 \endverbatim
  *
- * Coming to the asynchronous requests, \c record has to be attached to
+ * Coming to the asynchronous requests, \c transcode has to be attached to
  * a JSEP offer (failure to do so will result in an error) and has to be
  * formatted as follows:
  *
 \verbatim
 {
-	"request" : "record",
-	"id" : <unique numeric ID for the recording; optional, will be chosen by the server if missing>
-	"name" : "<Pretty name for the recording>"
+	"request" : "transcode",
+	"id" : <unique numeric ID for the transcoding; optional, will be chosen by the server if missing>
+	"name" : "<Pretty name for the transcoding>"
 }
 \endverbatim
  *
- * A successful management of this request will result in a \c recording
- * event which will include the unique ID of the recording and a JSEP
- * answer to complete the setup of the associated PeerConnection to record:
+ * A successful management of this request will result in a \c transcoding
+ * event which will include the unique ID of the transcoding and a JSEP
+ * answer to complete the setup of the associated PeerConnection to transcode:
  *
 \verbatim
 {
 	"transcode" : "event",
 	"result": {
-		"status" : "recording",
+		"status" : "transcoding",
 		"id" : <unique numeric ID>
 	}
 }
 \endverbatim
  *
- * A \c stop request can interrupt the recording process and tear the
+ * A \c stop request can interrupt the transcoding process and tear the
  * associated PeerConnection down:
  *
 \verbatim
@@ -161,17 +161,17 @@
 	"transcode" : "event",
 	"result": {
 		"status" : "stopped",
-		"id" : <unique numeric ID of the interrupted recording>
+		"id" : <unique numeric ID of the interrupted transcoding>
 	}
 }
 \endverbatim
  *
  * For what concerns the playout, instead, the process is slightly
- * different: you first choose a recording to replay, using \c play ,
+ * different: you first choose a transcoding to replay, using \c play ,
  * and then start its playout using a \c start request. Just as before,
  * a \c stop request will interrupt the playout and tear the PeerConnection
  * down. It's very important to point out that no JSEP offer must be
- * sent for replaying a recording: in this case, it will always be the
+ * sent for replaying a transcoding: in this case, it will always be the
  * plugin to generate a JSON offer (in response to a \c play request),
  * which means you'll then have to provide a JSEP answer within the
  * context of the following \c start request which will close the circle.
@@ -181,20 +181,20 @@
 \verbatim
 {
 	"request" : "play",
-	"id" : <unique numeric ID of the recording to replay>
+	"id" : <unique numeric ID of the transcoding to replay>
 }
 \endverbatim
  *
  * This will result in a \c preparing status notification which will be
  * attached to the JSEP offer originated by the plugin in order to
- * match the media available in the recording:
+ * match the media available in the transcoding:
  *
 \verbatim
 {
 	"transcode" : "event",
 	"result": {
 		"status" : "preparing",
-		"id" : <unique numeric ID of the recording>
+		"id" : <unique numeric ID of the transcoding>
 	}
 }
 \endverbatim
@@ -243,7 +243,7 @@
  * If the plugin detects a loss of the associated PeerConnection, whether
  * as a result of a \c stop request or because the 10 seconds passed, a
  * \c done result notification is triggered to inform the application
- * the recording/playout session is over:
+ * the transcoding/playout session is over:
  *
 \verbatim
 {
@@ -275,8 +275,8 @@
 /* Plugin information */
 #define JANUS_TRANSCODE_VERSION			4
 #define JANUS_TRANSCODE_VERSION_STRING		"0.0.4"
-#define JANUS_TRANSCODE_DESCRIPTION		"This is a trivial Record&Play plugin for Janus, to record WebRTC sessions and replay them."
-#define JANUS_TRANSCODE_NAME				"JANUS Record&Play plugin"
+#define JANUS_TRANSCODE_DESCRIPTION		"This is a trivial Transcode plugin for Janus, to transcode WebRTC sessions and replay them."
+#define JANUS_TRANSCODE_NAME				"JANUS Transcode plugin"
 #define JANUS_TRANSCODE_AUTHOR				"Meetecho s.r.l."
 #define JANUS_TRANSCODE_PACKAGE			"janus.plugin.transcode"
 
@@ -385,10 +385,10 @@ typedef struct janus_transcode_frame_packet {
 } janus_transcode_frame_packet;
 janus_transcode_frame_packet *janus_transcode_get_frames(const char *dir, const char *filename);
 
-typedef struct janus_transcode_recording {
-	guint64 id;					/* Recording unique ID */
-	char *name;					/* Name of the recording */
-	char *date;					/* Time of the recording */
+typedef struct janus_transcode_transcoding {
+	guint64 id;					/* Transcoding unique ID */
+	char *name;					/* Name of the transcoding */
+	char *date;					/* Time of the transcoding */
 	char *arc_file;				/* Audio file name */
 	janus_audiocodec acodec;	/* Codec used for audio, if available */
 	int audio_pt;				/* Payload types to use for audio when playing transcoding */
@@ -396,12 +396,12 @@ typedef struct janus_transcode_recording {
 	janus_videocodec vcodec;	/* Codec used for video, if available */
 	int video_pt;				/* Payload types to use for audio when playing transcoding */
 	char *offer;				/* The SDP offer that will be sent to watchers */
-	GList *viewers;				/* List of users watching this recording */
-	volatile gint completed;	/* Whether this recording was completed or still going on */
-	volatile gint destroyed;	/* Whether this recording has been marked as destroyed */
+	GList *viewers;				/* List of users watching this transcoding */
+	volatile gint completed;	/* Whether this transcoding was completed or still going on */
+	volatile gint destroyed;	/* Whether this transcoding has been marked as destroyed */
 	janus_refcount ref;			/* Reference counter */
-	janus_mutex mutex;			/* Mutex for this recording */
-} janus_transcode_recording;
+	janus_mutex mutex;			/* Mutex for this transcoding */
+} janus_transcode_transcoding;
 static GHashTable *transcoding = NULL;
 static janus_mutex transcoding_mutex = JANUS_MUTEX_INITIALIZER;
 
@@ -410,9 +410,9 @@ typedef struct janus_transcode_session {
 	gint64 sdp_sessid;
 	gint64 sdp_version;
 	gboolean active;
-	gboolean transcoder;		/* Whether this session is used to record or to replay a WebRTC session */
+	gboolean transcoder;		/* Whether this session is used to transcode or to replay a WebRTC session */
 	gboolean firefox;		/* We send Firefox users a different kind of FIR */
-	janus_transcode_recording *recording;
+	janus_transcode_transcoding *transcoding;
 	janus_transcoder *arc;	/* Audio transcoder */
 	janus_transcoder *vrc;	/* Video transcoder */
 	janus_live_pub *pub;	/* live pub */
@@ -428,7 +428,7 @@ typedef struct janus_transcode_session {
 	janus_rtp_switching_context context;
 	uint32_t ssrc[3];		/* Only needed in case VP8 (or H.264) simulcasting is involved */
 	char *rid[3];			/* Only needed if simulcasting is rid-based */
-	uint32_t rec_vssrc;		/* SSRC we'll put in the recording for video, in case simulcasting is involved) */
+	uint32_t rec_vssrc;		/* SSRC we'll put in the transcoding for video, in case simulcasting is involved) */
 	janus_rtp_simulcasting_context sim_context;
 	janus_vp8_simulcast_context vp8_context;
 	volatile gint hangingup;
@@ -452,20 +452,20 @@ static void janus_transcode_session_free(const janus_refcount *session_ref) {
 }
 
 
-static void janus_transcode_recording_destroy(janus_transcode_recording *recording) {
-	if(recording && g_atomic_int_compare_and_exchange(&recording->destroyed, 0, 1))
-		janus_refcount_decrease(&recording->ref);
+static void janus_transcode_transcoding_destroy(janus_transcode_transcoding *transcoding) {
+	if(transcoding && g_atomic_int_compare_and_exchange(&transcoding->destroyed, 0, 1))
+		janus_refcount_decrease(&transcoding->ref);
 }
 
-static void janus_transcode_recording_free(const janus_refcount *recording_ref) {
-	janus_transcode_recording *recording = janus_refcount_containerof(recording_ref, janus_transcode_recording, ref);
-	/* This recording can be destroyed, free all the resources */
-	g_free(recording->name);
-	g_free(recording->date);
-	g_free(recording->arc_file);
-	g_free(recording->vrc_file);
-	g_free(recording->offer);
-	g_free(recording);
+static void janus_transcode_transcoding_free(const janus_refcount *transcoding_ref) {
+	janus_transcode_transcoding *transcoding = janus_refcount_containerof(transcoding_ref, janus_transcode_transcoding, ref);
+	/* This transcoding can be destroyed, free all the resources */
+	g_free(transcoding->name);
+	g_free(transcoding->date);
+	g_free(transcoding->arc_file);
+	g_free(transcoding->vrc_file);
+	g_free(transcoding->offer);
+	g_free(transcoding);
 }
 
 
@@ -481,7 +481,7 @@ void janus_transcode_send_rtcp_feedback(janus_plugin_session *handle, int video,
 #define AUDIO_PT		111
 #define VIDEO_PT		100
 
-/* Helper method to check which codec was used in a specific recording */
+/* Helper method to check which codec was used in a specific transcoding */
 static const char *janus_transcode_parse_codec(const char *dir, const char *filename) {
 	if(dir == NULL || filename == NULL)
 		return NULL;
@@ -528,16 +528,16 @@ static const char *janus_transcode_parse_codec(const char *dir, const char *file
 				parsed_header = TRUE;
 				bytes = fread(prebuffer, sizeof(char), 5, file);
 				if(prebuffer[0] == 'v') {
-					JANUS_LOG(LOG_VERB, "This is an old video recording, assuming VP8\n");
+					JANUS_LOG(LOG_VERB, "This is an old video transcoding, assuming VP8\n");
 					fclose(file);
 					return "vp8";
 				} else if(prebuffer[0] == 'a') {
-					JANUS_LOG(LOG_VERB, "This is an old audio recording, assuming Opus\n");
+					JANUS_LOG(LOG_VERB, "This is an old audio transcoding, assuming Opus\n");
 					fclose(file);
 					return "opus";
 				}
 			}
-			JANUS_LOG(LOG_WARN, "Unsupported recording media type...\n");
+			JANUS_LOG(LOG_WARN, "Unsupported transcoding media type...\n");
 			fclose(file);
 			return NULL;
 		} else if(prebuffer[1] == 'J') {
@@ -567,7 +567,7 @@ static const char *janus_transcode_parse_codec(const char *dir, const char *file
 				/* Is it audio or video? */
 				json_t *type = json_object_get(info, "t");
 				if(!type || !json_is_string(type)) {
-					JANUS_LOG(LOG_WARN, "Missing/invalid recording type in info header...\n");
+					JANUS_LOG(LOG_WARN, "Missing/invalid transcoding type in info header...\n");
 					json_decref(info);
 					fclose(file);
 					return NULL;
@@ -579,7 +579,7 @@ static const char *janus_transcode_parse_codec(const char *dir, const char *file
 				} else if(!strcasecmp(t, "a")) {
 					video = FALSE;
 				} else {
-					JANUS_LOG(LOG_WARN, "Unsupported recording type '%s' in info header...\n", t);
+					JANUS_LOG(LOG_WARN, "Unsupported transcoding type '%s' in info header...\n", t);
 					json_decref(info);
 					fclose(file);
 					return NULL;
@@ -587,7 +587,7 @@ static const char *janus_transcode_parse_codec(const char *dir, const char *file
 				/* What codec was used? */
 				json_t *codec = json_object_get(info, "c");
 				if(!codec || !json_is_string(codec)) {
-					JANUS_LOG(LOG_WARN, "Missing recording codec in info header...\n");
+					JANUS_LOG(LOG_WARN, "Missing transcoding codec in info header...\n");
 					json_decref(info);
 					fclose(file);
 					return NULL;
@@ -615,15 +615,15 @@ static const char *janus_transcode_parse_codec(const char *dir, const char *file
 	return NULL;
 }
 
-/* Helper method to prepare an SDP offer when a recording is available */
-static int janus_transcode_generate_offer(janus_transcode_recording *rec) {
+/* Helper method to prepare an SDP offer when a transcoding is available */
+static int janus_transcode_generate_offer(janus_transcode_transcoding *rec) {
 	if(rec == NULL)
 		return -1;
 	/* Prepare an SDP offer we'll send to playout viewers */
 	gboolean offer_audio = (rec->arc_file != NULL && rec->acodec != JANUS_AUDIOCODEC_NONE),
 		offer_video = (rec->vrc_file != NULL && rec->vcodec != JANUS_VIDEOCODEC_NONE);
 	char s_name[100];
-	g_snprintf(s_name, sizeof(s_name), "Recording %"SCNu64, rec->id);
+	g_snprintf(s_name, sizeof(s_name), "Transcoding %"SCNu64, rec->id);
 	janus_sdp *offer = janus_sdp_generate_offer(
 		s_name, "1.1.1.1",
 		JANUS_SDP_OA_AUDIO, offer_audio,
@@ -672,10 +672,10 @@ static void janus_transcode_message_free(janus_transcode_message *msg) {
 #define JANUS_TRANSCODE_ERROR_INVALID_ELEMENT		414
 #define JANUS_TRANSCODE_ERROR_MISSING_ELEMENT		415
 #define JANUS_TRANSCODE_ERROR_NOT_FOUND			416
-#define JANUS_TRANSCODE_ERROR_INVALID_RECORDING	417
+#define JANUS_TRANSCODE_ERROR_INVALID_TRANSCODING	417
 #define JANUS_TRANSCODE_ERROR_INVALID_STATE		418
 #define JANUS_TRANSCODE_ERROR_INVALID_SDP			419
-#define JANUS_TRANSCODE_ERROR_RECORDING_EXISTS		420
+#define JANUS_TRANSCODE_ERROR_TRANSCODING_EXISTS		420
 #define JANUS_TRANSCODE_ERROR_UNKNOWN_ERROR		499
 
 
@@ -736,7 +736,7 @@ int janus_transcode_init(janus_callbacks *callback, const char *config_path) {
 			return -1;	/* No point going on... */
 		}
 	}
-	transcoding = g_hash_table_new_full(g_int64_hash, g_int64_equal, (GDestroyNotify)g_free, (GDestroyNotify)janus_transcode_recording_destroy);
+	transcoding = g_hash_table_new_full(g_int64_hash, g_int64_equal, (GDestroyNotify)g_free, (GDestroyNotify)janus_transcode_transcoding_destroy);
 	janus_transcode_update_transcoding_list();
 
 	sessions = g_hash_table_new_full(NULL, NULL, NULL, (GDestroyNotify)janus_transcode_session_destroy);
@@ -751,7 +751,7 @@ int janus_transcode_init(janus_callbacks *callback, const char *config_path) {
 	handler_thread = g_thread_try_new("transcode handler", janus_transcode_handler, NULL, &error);
 	if(error != NULL) {
 		g_atomic_int_set(&initialized, 0);
-		JANUS_LOG(LOG_ERR, "Got error %d (%s) trying to launch the Record&Play handler thread...\n", error->code, error->message ? error->message : "??");
+		JANUS_LOG(LOG_ERR, "Got error %d (%s) trying to launch the Transcode handler thread...\n", error->code, error->message ? error->message : "??");
 		return -1;
 	}
 	JANUS_LOG(LOG_INFO, "%s initialized!\n", JANUS_TRANSCODE_NAME);
@@ -862,11 +862,11 @@ void janus_transcode_destroy_session(janus_plugin_session *handle, int *error) {
 	janus_transcode_session *session = janus_transcode_lookup_session(handle);
 	if(!session) {
 		janus_mutex_unlock(&sessions_mutex);
-		JANUS_LOG(LOG_ERR, "No Record&Play session associated with this handle...\n");
+		JANUS_LOG(LOG_ERR, "No Transcode session associated with this handle...\n");
 		*error = -2;
 		return;
 	}
-	JANUS_LOG(LOG_VERB, "Removing Record&Play session...\n");
+	JANUS_LOG(LOG_VERB, "Removing Transcode session...\n");
 	janus_transcode_hangup_media_internal(handle);
 	g_hash_table_remove(sessions, handle);
 	janus_mutex_unlock(&sessions_mutex);
@@ -888,12 +888,12 @@ json_t *janus_transcode_query_session(janus_plugin_session *handle) {
 	janus_mutex_unlock(&sessions_mutex);
 	/* In the echo test, every session is the same: we just provide some configure info */
 	json_t *info = json_object();
-	json_object_set_new(info, "type", json_string(session->transcoder ? "transcoder" : (session->recording ? "player" : "none")));
-	if(session->recording) {
-		janus_refcount_increase(&session->recording->ref);
-		json_object_set_new(info, "recording_id", json_integer(session->recording->id));
-		json_object_set_new(info, "recording_name", json_string(session->recording->name));
-		janus_refcount_decrease(&session->recording->ref);
+	json_object_set_new(info, "type", json_string(session->transcoder ? "transcoder" : (session->transcoding ? "player" : "none")));
+	if(session->transcoding) {
+		janus_refcount_increase(&session->transcoding->ref);
+		json_object_set_new(info, "transcoding_id", json_integer(session->transcoding->id));
+		json_object_set_new(info, "transcoding_name", json_string(session->transcoding->name));
+		janus_refcount_decrease(&session->transcoding->ref);
 	}
 	json_object_set_new(info, "hangingup", json_integer(g_atomic_int_get(&session->hangingup)));
 	json_object_set_new(info, "destroyed", json_integer(g_atomic_int_get(&session->destroyed)));
@@ -967,8 +967,8 @@ struct janus_plugin_result *janus_transcode_handle_message(janus_plugin_session 
 		gpointer value;
 		g_hash_table_iter_init(&iter, transcoding);
 		while (g_hash_table_iter_next(&iter, NULL, &value)) {
-			janus_transcode_recording *rec = value;
-			if(!g_atomic_int_get(&rec->completed))	/* Ongoing recording, skip */
+			janus_transcode_transcoding *rec = value;
+			if(!g_atomic_int_get(&rec->completed))	/* Ongoing transcoding, skip */
 				continue;
 			janus_refcount_increase(&rec->ref);
 			json_t *ml = json_object();
@@ -1016,7 +1016,7 @@ struct janus_plugin_result *janus_transcode_handle_message(janus_plugin_session 
 		json_object_set_new(settings, "video-bitrate-max", json_integer(session->video_bitrate));
 		json_object_set_new(response, "settings", settings);
 		goto plugin_response;
-	} else if(!strcasecmp(request_text, "record") || !strcasecmp(request_text, "play")
+	} else if(!strcasecmp(request_text, "transcode") || !strcasecmp(request_text, "play")
 			|| !strcasecmp(request_text, "start") || !strcasecmp(request_text, "stop")) {
 		/* These messages are handled asynchronously */
 		janus_transcode_message *msg = g_malloc(sizeof(janus_transcode_message));
@@ -1128,7 +1128,7 @@ void janus_transcode_setup_media(janus_plugin_session *handle) {
 		if(error != NULL) {
 			janus_refcount_decrease(&session->ref);
 			/* FIXME Should we notify this back to the user somehow? */
-			JANUS_LOG(LOG_ERR, "Got error %d (%s) trying to launch the Record&Play playout thread...\n", error->code, error->message ? error->message : "??");
+			JANUS_LOG(LOG_ERR, "Got error %d (%s) trying to launch the Transcode playout thread...\n", error->code, error->message ? error->message : "??");
 			gateway->close_pc(session->handle);
 		}
 	}
@@ -1189,7 +1189,7 @@ void janus_transcode_incoming_rtp(janus_plugin_session *handle, int video, char 
 	}
 	if(g_atomic_int_get(&session->destroyed))
 		return;
-	if(!session->transcoder || !session->recording)
+	if(!session->transcoder || !session->transcoding)
 		return;
 	if(video && (session->ssrc[0] != 0 || session->rid[0] != NULL)) {
 		/* Handle simulcast: backup the header information first */
@@ -1199,7 +1199,7 @@ void janus_transcode_incoming_rtp(janus_plugin_session *handle, int video, char 
 		uint32_t ssrc = ntohl(header->ssrc);
 		/* Process this packet: don't save if it's not the SSRC/layer we wanted to handle */
 		gboolean save = janus_rtp_simulcasting_context_process_rtp(&session->sim_context,
-			buf, len, session->ssrc, session->rid, session->recording->vcodec, &session->context);
+			buf, len, session->ssrc, session->rid, session->transcoding->vcodec, &session->context);
 		if(session->sim_context.need_pli) {
 			/* Send a PLI */
 			JANUS_LOG(LOG_VERB, "We need a PLI for the simulcast context\n");
@@ -1213,12 +1213,12 @@ void janus_transcode_incoming_rtp(janus_plugin_session *handle, int video, char 
 			return;
 		/* If we got here, update the RTP header and save the packet */
 		janus_rtp_header_update(header, &session->context, TRUE, 0);
-		if(session->recording->vcodec == JANUS_VIDEOCODEC_VP8) {
+		if(session->transcoding->vcodec == JANUS_VIDEOCODEC_VP8) {
 			int plen = 0;
 			char *payload = janus_rtp_payload(buf, len, &plen);
 			janus_vp8_simulcast_descriptor_update(payload, plen, &session->vp8_context, session->sim_context.changed_substream);
 		}
-		/* Save the frame if we're recording (and make sure the SSRC never changes even if the substream does) */
+		/* Save the frame if we're transcoding (and make sure the SSRC never changes even if the substream does) */
 		if(session->rec_vssrc == 0)
 			session->rec_vssrc = g_random_int();
 		header->ssrc = htonl(session->rec_vssrc);
@@ -1229,7 +1229,7 @@ void janus_transcode_incoming_rtp(janus_plugin_session *handle, int video, char 
 		header->timestamp = htonl(timestamp);
 		header->seq_number = htons(seq_number);
 	} else {
-		/* Save the frame if we're recording */
+		/* Save the frame if we're transcoding */
 		janus_transcoder_save_frame(video ? session->vrc : session->arc, buf, len);
 		janus_transcoder_pub_save_frame(session->pub, buf, len, video, 1);
 	}
@@ -1308,14 +1308,14 @@ static void janus_transcode_hangup_media_internal(janus_plugin_session *handle) 
 		janus_transcoder *rc = session->arc;
 		session->arc = NULL;
 		janus_transcoder_close(rc);
-		JANUS_LOG(LOG_INFO, "Closed audio recording %s\n", rc->filename ? rc->filename : "??");
+		JANUS_LOG(LOG_INFO, "Closed audio transcoding %s\n", rc->filename ? rc->filename : "??");
 		janus_transcoder_destroy(rc);
 	}
 	if(session->vrc) {
 		janus_transcoder *rc = session->vrc;
 		session->vrc = NULL;
 		janus_transcoder_close(rc);
-		JANUS_LOG(LOG_INFO, "Closed video recording %s\n", rc->filename ? rc->filename : "??");
+		JANUS_LOG(LOG_INFO, "Closed video transcoding %s\n", rc->filename ? rc->filename : "??");
 		janus_transcoder_destroy(rc);
 	}
 		if(session->pub) {
@@ -1327,58 +1327,58 @@ static void janus_transcode_hangup_media_internal(janus_plugin_session *handle) 
 	}
 	janus_mutex_unlock(&session->rec_mutex);
 	if(session->transcoder) {
-		if(session->recording) {
-			/* Create a .nfo file for this recording */
+		if(session->transcoding) {
+			/* Create a .nfo file for this transcoding */
 			char nfofile[1024], nfo[1024];
 			nfofile[0] = '\0';
 			nfo[0] = '\0';
-			g_snprintf(nfofile, 1024, "%s/%"SCNu64".nfo", transcoding_path, session->recording->id);
+			g_snprintf(nfofile, 1024, "%s/%"SCNu64".nfo", transcoding_path, session->transcoding->id);
 			FILE *file = fopen(nfofile, "wt");
 			if(file == NULL) {
 				JANUS_LOG(LOG_ERR, "Error creating file %s...\n", nfofile);
 			} else {
-				if(session->recording->arc_file && session->recording->vrc_file) {
+				if(session->transcoding->arc_file && session->transcoding->vrc_file) {
 					g_snprintf(nfo, 1024,
 						"[%"SCNu64"]\r\n"
 						"name = %s\r\n"
 						"date = %s\r\n"
 						"audio = %s.mjr\r\n"
 						"video = %s.mjr\r\n",
-							session->recording->id, session->recording->name, session->recording->date,
-							session->recording->arc_file, session->recording->vrc_file);
-				} else if(session->recording->arc_file) {
+							session->transcoding->id, session->transcoding->name, session->transcoding->date,
+							session->transcoding->arc_file, session->transcoding->vrc_file);
+				} else if(session->transcoding->arc_file) {
 					g_snprintf(nfo, 1024,
 						"[%"SCNu64"]\r\n"
 						"name = %s\r\n"
 						"date = %s\r\n"
 						"audio = %s.mjr\r\n",
-							session->recording->id, session->recording->name, session->recording->date,
-							session->recording->arc_file);
-				} else if(session->recording->vrc_file) {
+							session->transcoding->id, session->transcoding->name, session->transcoding->date,
+							session->transcoding->arc_file);
+				} else if(session->transcoding->vrc_file) {
 					g_snprintf(nfo, 1024,
 						"[%"SCNu64"]\r\n"
 						"name = %s\r\n"
 						"date = %s\r\n"
 						"video = %s.mjr\r\n",
-							session->recording->id, session->recording->name, session->recording->date,
-							session->recording->vrc_file);
+							session->transcoding->id, session->transcoding->name, session->transcoding->date,
+							session->transcoding->vrc_file);
 				}
 				/* Write to the file now */
 				fwrite(nfo, strlen(nfo), sizeof(char), file);
 				fclose(file);
-				g_atomic_int_set(&session->recording->completed, 1);
+				g_atomic_int_set(&session->transcoding->completed, 1);
 				/* Generate the offer */
-				if(janus_transcode_generate_offer(session->recording) < 0) {
-					JANUS_LOG(LOG_WARN, "Could not generate offer for recording %"SCNu64"...\n", session->recording->id);
+				if(janus_transcode_generate_offer(session->transcoding) < 0) {
+					JANUS_LOG(LOG_WARN, "Could not generate offer for transcoding %"SCNu64"...\n", session->transcoding->id);
 				}
 			}
 		} else {
-			JANUS_LOG(LOG_WARN, "Got a stop but missing transcoder/recording! .nfo file may not have been generated...\n");
+			JANUS_LOG(LOG_WARN, "Got a stop but missing transcoder/transcoding! .nfo file may not have been generated...\n");
 		}
 	}
-	if(session->recording) {
-		janus_refcount_decrease(&session->recording->ref);
-		session->recording = NULL;
+	if(session->transcoding) {
+		janus_refcount_decrease(&session->transcoding->ref);
+		session->transcoding = NULL;
 	}
 	int i=0;
 	for(i=0; i<3; i++) {
@@ -1391,7 +1391,7 @@ static void janus_transcode_hangup_media_internal(janus_plugin_session *handle) 
 
 /* Thread to handle incoming messages */
 static void *janus_transcode_handler(void *data) {
-	JANUS_LOG(LOG_VERB, "Joining Record&Play handler thread\n");
+	JANUS_LOG(LOG_VERB, "Joining Transcode handler thread\n");
 	janus_transcode_message *msg = NULL;
 	int error_code = 0;
 	char error_cause[512];
@@ -1445,14 +1445,14 @@ static void *janus_transcode_handler(void *data) {
 		if(json_object_get(msg->jsep, "update") != NULL)
 			sdp_update = json_is_true(json_object_get(msg->jsep, "update"));
 		const char *filename_text = NULL;
-		if(!strcasecmp(request_text, "record")) {
+		if(!strcasecmp(request_text, "transcode")) {
 			if(!msg_sdp || !msg_sdp_type || strcasecmp(msg_sdp_type, "offer")) {
 				JANUS_LOG(LOG_ERR, "Missing SDP offer\n");
 				error_code = JANUS_TRANSCODE_ERROR_MISSING_ELEMENT;
 				g_snprintf(error_cause, 512, "Missing SDP offer");
 				goto error;
 			}
-			JANUS_VALIDATE_JSON_OBJECT(root, record_parameters,
+			JANUS_VALIDATE_JSON_OBJECT(root, transcode_parameters,
 				error_code, error_cause, TRUE,
 				JANUS_TRANSCODE_ERROR_MISSING_ELEMENT, JANUS_TRANSCODE_ERROR_INVALID_ELEMENT);
 			if(error_code != 0)
@@ -1479,26 +1479,26 @@ static void *janus_transcode_handler(void *data) {
 			}
 			/* Check if this is a new transcoder, or if an update is taking place (i.e., ICE restart) */
 			guint64 id = 0;
-			janus_transcode_recording *rec = NULL;
+			janus_transcode_transcoding *rec = NULL;
 			gboolean audio = FALSE, video = FALSE;
 			if(sdp_update) {
 				/* Renegotiation: make sure the user provided an offer, and send answer */
 				JANUS_LOG(LOG_VERB, "Request to update existing transcoder\n");
-				if(!session->transcoder || !session->recording) {
-					JANUS_LOG(LOG_ERR, "Not a recording session, can't update\n");
+				if(!session->transcoder || !session->transcoding) {
+					JANUS_LOG(LOG_ERR, "Not a transcoding session, can't update\n");
 					error_code = JANUS_TRANSCODE_ERROR_INVALID_STATE;
-					g_snprintf(error_cause, 512, "Not a recording session, can't update");
+					g_snprintf(error_cause, 512, "Not a transcoding session, can't update");
 					goto error;
 				}
-				id = session->recording->id;
-				rec = session->recording;
+				id = session->transcoding->id;
+				rec = session->transcoding;
 				session->sdp_version++;		/* This needs to be increased when it changes */
 				audio = (session->arc != NULL);
 				video = (session->vrc != NULL);
 				sdp_update = do_update;
 				goto recdone;
 			}
-			/* If we're here, we're doing a new recording */
+			/* If we're here, we're doing a new transcoding */
 			janus_mutex_lock(&transcoding_mutex);
 			json_t *rec_id = json_object_get(root, "id");
 			if(rec_id) {
@@ -1508,9 +1508,9 @@ static void *janus_transcode_handler(void *data) {
 					if(g_hash_table_lookup(transcoding, &id) != NULL) {
 						/* It does... */
 						janus_mutex_unlock(&transcoding_mutex);
-						JANUS_LOG(LOG_ERR, "Recording %"SCNu64" already exists!\n", id);
-						error_code = JANUS_TRANSCODE_ERROR_RECORDING_EXISTS;
-						g_snprintf(error_cause, 512, "Recording %"SCNu64" already exists", id);
+						JANUS_LOG(LOG_ERR, "Transcoding %"SCNu64" already exists!\n", id);
+						error_code = JANUS_TRANSCODE_ERROR_TRANSCODING_EXISTS;
+						g_snprintf(error_cause, 512, "Transcoding %"SCNu64" already exists", id);
 						goto error;
 					}
 				}
@@ -1519,13 +1519,13 @@ static void *janus_transcode_handler(void *data) {
 				while(id == 0) {
 					id = janus_random_uint64();
 					if(g_hash_table_lookup(transcoding, &id) != NULL) {
-						/* Recording ID already taken, try another one */
+						/* Transcoding ID already taken, try another one */
 						id = 0;
 					}
 				}
 			}
-			JANUS_LOG(LOG_VERB, "Starting new recording with ID %"SCNu64"\n", id);
-			rec = g_malloc0(sizeof(janus_transcode_recording));
+			JANUS_LOG(LOG_VERB, "Starting new transcoding with ID %"SCNu64"\n", id);
+			rec = g_malloc0(sizeof(janus_transcode_transcoding));
 			rec->id = id;
 			rec->name = g_strdup(name_text);
 			rec->viewers = NULL;
@@ -1534,10 +1534,10 @@ static void *janus_transcode_handler(void *data) {
 			rec->vcodec = JANUS_VIDEOCODEC_NONE;
 			g_atomic_int_set(&rec->destroyed, 0);
 			g_atomic_int_set(&rec->completed, 0);
-			janus_refcount_init(&rec->ref, janus_transcode_recording_free);
-			janus_refcount_increase(&rec->ref);	/* This is for the user writing the recording */
+			janus_refcount_init(&rec->ref, janus_transcode_transcoding_free);
+			janus_refcount_increase(&rec->ref);	/* This is for the user writing the transcoding */
 			janus_mutex_init(&rec->mutex);
-			/* Check which codec we should record for audio and/or video */
+			/* Check which codec we should transcode for audio and/or video */
 			const char *acodec = NULL, *vcodec = NULL;
 			janus_sdp_find_preferred_codecs(offer, &acodec, &vcodec);
 			vcodec = "h264";
@@ -1600,7 +1600,7 @@ static void *janus_transcode_handler(void *data) {
 			g_snprintf(rtmpurl, 1024, "%s/%"SCNu64"", rtmp_path, rec->id);
 			session->pub = janus_transcoder_pub_create(rtmpurl, janus_audiocodec_name(rec->acodec), janus_audiocodec_name(rec->vcodec));
 			session->transcoder = TRUE;
-			session->recording = rec;
+			session->transcoding = rec;
 			session->sdp_version = 1;	/* This needs to be increased when it changes */
 			session->sdp_sessid = janus_get_real_time();
 			g_hash_table_insert(transcoding, janus_uint64_dup(rec->id), rec);
@@ -1623,7 +1623,7 @@ recdone:
 				JANUS_SDP_OA_DONE);
 			g_free(answer->s_name);
 			char s_name[100];
-			g_snprintf(s_name, sizeof(s_name), "Recording %"SCNu64, rec->id);
+			g_snprintf(s_name, sizeof(s_name), "Transcoding %"SCNu64, rec->id);
 			answer->s_name = g_strdup(s_name);
 			/* Let's overwrite a couple o= fields, in case this is a renegotiation */
 			answer->o_sessid = session->sdp_sessid;
@@ -1636,7 +1636,7 @@ recdone:
 			/* If the user negotiated simulcasting, prepare it accordingly */
 			json_t *msg_simulcast = json_object_get(msg->jsep, "simulcast");
 			if(msg_simulcast) {
-				JANUS_LOG(LOG_VERB, "Recording client negotiated simulcasting\n");
+				JANUS_LOG(LOG_VERB, "Transcoding client negotiated simulcasting\n");
 				int rid_ext_id = -1, framemarking_ext_id = -1;
 				janus_rtp_simulcasting_prepare(msg_simulcast, &rid_ext_id, &framemarking_ext_id, session->ssrc, session->rid);
 				session->sim_context.rid_ext_id = rid_ext_id;
@@ -1655,12 +1655,12 @@ recdone:
 			}
 			/* Done! */
 			result = json_object();
-			json_object_set_new(result, "status", json_string("recording"));
+			json_object_set_new(result, "status", json_string("transcoding"));
 			json_object_set_new(result, "id", json_integer(id));
 			/* Also notify event handlers */
 			if(!sdp_update && notify_events && gateway->events_is_enabled()) {
 				json_t *info = json_object();
-				json_object_set_new(info, "event", json_string("recording"));
+				json_object_set_new(info, "event", json_string("transcoding"));
 				json_object_set_new(info, "id", json_integer(id));
 				json_object_set_new(info, "audio", session->arc ? json_true() : json_false());
 				json_object_set_new(info, "video", session->vrc ? json_true() : json_false());
@@ -1673,7 +1673,7 @@ recdone:
 				g_snprintf(error_cause, 512, "A play request can't contain an SDP");
 				goto error;
 			}
-			JANUS_LOG(LOG_VERB, "Replaying a recording\n");
+			JANUS_LOG(LOG_VERB, "Replaying a transcoding\n");
 			JANUS_VALIDATE_JSON_OBJECT(root, play_parameters,
 				error_code, error_cause, TRUE,
 				JANUS_TRANSCODE_ERROR_MISSING_ELEMENT, JANUS_TRANSCODE_ERROR_INVALID_ELEMENT);
@@ -1683,18 +1683,18 @@ recdone:
 			gboolean do_restart = restart ? json_is_true(restart) : FALSE;
 			/* Check if this is a new playout, or if an update is taking place (i.e., ICE restart) */
 			guint64 id_value = 0;
-			janus_transcode_recording *rec = NULL;
+			janus_transcode_transcoding *rec = NULL;
 			const char *warning = NULL;
 			if(sdp_update || do_restart) {
 				/* Renegotiation: make sure the user provided an offer, and send answer */
 				JANUS_LOG(LOG_VERB, "Request to perform an ICE restart on existing playout\n");
-				if(session->transcoder || session->recording == NULL || session->recording->offer == NULL) {
+				if(session->transcoder || session->transcoding == NULL || session->transcoding->offer == NULL) {
 					JANUS_LOG(LOG_ERR, "Not a playout session, can't restart\n");
 					error_code = JANUS_TRANSCODE_ERROR_INVALID_STATE;
 					g_snprintf(error_cause, 512, "Not a playout session, can't restart");
 					goto error;
 				}
-				rec = session->recording;
+				rec = session->transcoding;
 				id_value = rec->id;
 				session->sdp_version++;		/* This needs to be increased when it changes */
 				sdp_update = TRUE;
@@ -1716,7 +1716,7 @@ recdone:
 			/* If we got here, it's a new playout */
 			json_t *id = json_object_get(root, "id");
 			id_value = json_integer_value(id);
-			/* Look for this recording */
+			/* Look for this transcoding */
 			janus_mutex_lock(&transcoding_mutex);
 			rec = g_hash_table_lookup(transcoding, &id_value);
 			if(rec != NULL)
@@ -1725,32 +1725,32 @@ recdone:
 			if(rec == NULL || rec->offer == NULL || g_atomic_int_get(&rec->destroyed)) {
 				if(rec != NULL)
 					janus_refcount_decrease(&rec->ref);
-				JANUS_LOG(LOG_ERR, "No such recording\n");
+				JANUS_LOG(LOG_ERR, "No such transcoding\n");
 				error_code = JANUS_TRANSCODE_ERROR_NOT_FOUND;
-				g_snprintf(error_cause, 512, "No such recording");
+				g_snprintf(error_cause, 512, "No such transcoding");
 				goto error;
 			}
 			/* Access the frames */
 			if(rec->arc_file) {
 				session->aframes = janus_transcode_get_frames(transcoding_path, rec->arc_file);
 				if(session->aframes == NULL) {
-					JANUS_LOG(LOG_WARN, "Error opening audio recording, trying to go on anyway\n");
+					JANUS_LOG(LOG_WARN, "Error opening audio transcoding, trying to go on anyway\n");
 					warning = "Broken audio file, playing video only";
 				}
 			}
 			if(rec->vrc_file) {
 				session->vframes = janus_transcode_get_frames(transcoding_path, rec->vrc_file);
 				if(session->vframes == NULL) {
-					JANUS_LOG(LOG_WARN, "Error opening video recording, trying to go on anyway\n");
+					JANUS_LOG(LOG_WARN, "Error opening video transcoding, trying to go on anyway\n");
 					warning = "Broken video file, playing audio only";
 				}
 			}
 			if(session->aframes == NULL && session->vframes == NULL) {
-				error_code = JANUS_TRANSCODE_ERROR_INVALID_RECORDING;
-				g_snprintf(error_cause, 512, "Error opening recording files");
+				error_code = JANUS_TRANSCODE_ERROR_INVALID_TRANSCODING;
+				g_snprintf(error_cause, 512, "Error opening transcoding files");
 				goto error;
 			}
-			session->recording = rec;
+			session->transcoding = rec;
 			session->transcoder = FALSE;
 			rec->viewers = g_list_append(rec->viewers, session);
 			/* Send this viewer the prepared offer  */
@@ -1793,21 +1793,21 @@ playdone:
 			if(notify_events && gateway->events_is_enabled()) {
 				json_t *info = json_object();
 				json_object_set_new(info, "event", json_string("playing"));
-				json_object_set_new(info, "id", json_integer(session->recording->id));
+				json_object_set_new(info, "id", json_integer(session->transcoding->id));
 				gateway->notify_event(&janus_transcode_plugin, session->handle, info);
 			}
 		} else if(!strcasecmp(request_text, "stop")) {
 			/* Done! */
 			result = json_object();
 			json_object_set_new(result, "status", json_string("stopped"));
-			if(session->recording) {
-				json_object_set_new(result, "id", json_integer(session->recording->id));
+			if(session->transcoding) {
+				json_object_set_new(result, "id", json_integer(session->transcoding->id));
 				/* Also notify event handlers */
 				if(notify_events && gateway->events_is_enabled()) {
 					json_t *info = json_object();
 					json_object_set_new(info, "event", json_string("stopped"));
-					if(session->recording)
-						json_object_set_new(info, "id", json_integer(session->recording->id));
+					if(session->transcoding)
+						json_object_set_new(info, "id", json_integer(session->transcoding->id));
 					gateway->notify_event(&janus_transcode_plugin, session->handle, info);
 				}
 			}
@@ -1860,7 +1860,7 @@ error:
 			janus_transcode_message_free(msg);
 		}
 	}
-	JANUS_LOG(LOG_VERB, "LeavingRecord&Play handler thread\n");
+	JANUS_LOG(LOG_VERB, "LeavingTranscode handler thread\n");
 	return NULL;
 }
 
@@ -1876,7 +1876,7 @@ void janus_transcode_update_transcoding_list(void) {
 		gpointer value;
 		g_hash_table_iter_init(&iter, transcoding);
 		while(g_hash_table_iter_next(&iter, NULL, &value)) {
-			janus_transcode_recording *rec = value;
+			janus_transcode_transcoding *rec = value;
 			if(rec) {
 				janus_refcount_increase(&rec->ref);
 				old_transcoding = g_list_append(old_transcoding, &rec->id);
@@ -1899,17 +1899,17 @@ void janus_transcode_update_transcoding_list(void) {
 			continue;
 		if(strcasecmp(recent->d_name+len-4, ".nfo"))
 			continue;
-		JANUS_LOG(LOG_VERB, "Importing recording '%s'...\n", recent->d_name);
+		JANUS_LOG(LOG_VERB, "Importing transcoding '%s'...\n", recent->d_name);
 		memset(recpath, 0, 1024);
 		g_snprintf(recpath, 1024, "%s/%s", transcoding_path, recent->d_name);
 		janus_config *nfo = janus_config_parse(recpath);
 		if(nfo == NULL) {
-			JANUS_LOG(LOG_ERR, "Invalid recording '%s'...\n", recent->d_name);
+			JANUS_LOG(LOG_ERR, "Invalid transcoding '%s'...\n", recent->d_name);
 			continue;
 		}
 		GList *cl = janus_config_get_categories(nfo, NULL);
 		if(cl == NULL || cl->data == NULL) {
-			JANUS_LOG(LOG_WARN, "No recording info in '%s', skipping...\n", recent->d_name);
+			JANUS_LOG(LOG_WARN, "No transcoding info in '%s', skipping...\n", recent->d_name);
 			janus_config_destroy(nfo);
 			continue;
 		}
@@ -1921,12 +1921,12 @@ void janus_transcode_update_transcoding_list(void) {
 			janus_config_destroy(nfo);
 			continue;
 		}
-		janus_transcode_recording *rec = g_hash_table_lookup(transcoding, &id);
+		janus_transcode_transcoding *rec = g_hash_table_lookup(transcoding, &id);
 		if(rec != NULL) {
-			JANUS_LOG(LOG_VERB, "Skipping recording with ID %"SCNu64", it's already in the list...\n", id);
+			JANUS_LOG(LOG_VERB, "Skipping transcoding with ID %"SCNu64", it's already in the list...\n", id);
 			g_list_free(cl);
 			janus_config_destroy(nfo);
-			/* Mark that we updated this recording */
+			/* Mark that we updated this transcoding */
 			old_transcoding = g_list_remove(old_transcoding, &rec->id);
 			janus_refcount_decrease(&rec->ref);
 			continue;
@@ -1936,17 +1936,17 @@ void janus_transcode_update_transcoding_list(void) {
 		janus_config_item *audio = janus_config_get(nfo, cat, janus_config_type_item, "audio");
 		janus_config_item *video = janus_config_get(nfo, cat, janus_config_type_item, "video");
 		if(!name || !name->value || strlen(name->value) == 0 || !date || !date->value || strlen(date->value) == 0) {
-			JANUS_LOG(LOG_WARN, "Invalid info for recording %"SCNu64", skipping...\n", id);
+			JANUS_LOG(LOG_WARN, "Invalid info for transcoding %"SCNu64", skipping...\n", id);
 			g_list_free(cl);
 			janus_config_destroy(nfo);
 			continue;
 		}
 		if((!audio || !audio->value) && (!video || !video->value)) {
-			JANUS_LOG(LOG_WARN, "No audio and no video in recording %"SCNu64", skipping...\n", id);
+			JANUS_LOG(LOG_WARN, "No audio and no video in transcoding %"SCNu64", skipping...\n", id);
 			janus_config_destroy(nfo);
 			continue;
 		}
-		rec = g_malloc0(sizeof(janus_transcode_recording));
+		rec = g_malloc0(sizeof(janus_transcode_transcoding));
 		rec->id = id;
 		rec->name = g_strdup(name->value);
 		rec->date = g_strdup(date->value);
@@ -1955,7 +1955,7 @@ void janus_transcode_update_transcoding_list(void) {
 			char *ext = strstr(rec->arc_file, ".mjr");
 			if(ext != NULL)
 				*ext = '\0';
-			/* Check which codec is in this recording */
+			/* Check which codec is in this transcoding */
 			rec->acodec = janus_audiocodec_from_name(janus_transcode_parse_codec(transcoding_path, rec->arc_file));
 		}
 		if(video && video->value) {
@@ -1963,7 +1963,7 @@ void janus_transcode_update_transcoding_list(void) {
 			char *ext = strstr(rec->vrc_file, ".mjr");
 			if(ext != NULL)
 				*ext = '\0';
-			/* Check which codec is in this recording */
+			/* Check which codec is in this transcoding */
 			rec->vcodec = janus_videocodec_from_name(janus_transcode_parse_codec(transcoding_path, rec->vrc_file));
 		}
 		rec->audio_pt = AUDIO_PT;
@@ -1979,11 +1979,11 @@ void janus_transcode_update_transcoding_list(void) {
 		rec->video_pt = VIDEO_PT;
 		rec->viewers = NULL;
 		if(janus_transcode_generate_offer(rec) < 0) {
-			JANUS_LOG(LOG_WARN, "Could not generate offer for recording %"SCNu64"...\n", rec->id);
+			JANUS_LOG(LOG_WARN, "Could not generate offer for transcoding %"SCNu64"...\n", rec->id);
 		}
 		g_atomic_int_set(&rec->destroyed, 0);
 		g_atomic_int_set(&rec->completed, 1);
-		janus_refcount_init(&rec->ref, janus_transcode_recording_free);
+		janus_refcount_init(&rec->ref, janus_transcode_transcoding_free);
 		janus_mutex_init(&rec->mutex);
 
 		g_list_free(cl);
@@ -1997,8 +1997,8 @@ void janus_transcode_update_transcoding_list(void) {
 	if(old_transcoding != NULL) {
 		while(old_transcoding != NULL) {
 			guint64 id = *((guint64 *)old_transcoding->data);
-			JANUS_LOG(LOG_VERB, "Recording %"SCNu64" is not available anymore, removing...\n", id);
-			janus_transcode_recording *old_rec = g_hash_table_lookup(transcoding, &id);
+			JANUS_LOG(LOG_VERB, "Transcoding %"SCNu64" is not available anymore, removing...\n", id);
+			janus_transcode_transcoding *old_rec = g_hash_table_lookup(transcoding, &id);
 			if(old_rec != NULL) {
 				/* Remove it */
 				g_hash_table_remove(transcoding, &id);
@@ -2036,7 +2036,7 @@ janus_transcode_frame_packet *janus_transcode_get_frames(const char *dir, const 
 	int bytes = 0;
 	long offset = 0;
 	uint16_t len = 0, count = 0;
-	uint32_t first_ts = 0, last_ts = 0, reset = 0;	/* To handle whether there's a timestamp reset in the recording */
+	uint32_t first_ts = 0, last_ts = 0, reset = 0;	/* To handle whether there's a timestamp reset in the transcoding */
 	char prebuffer[1500];
 	memset(prebuffer, 0, 1500);
 	/* Let's look for timestamp resets first */
@@ -2061,11 +2061,11 @@ janus_transcode_frame_packet *janus_transcode_get_frames(const char *dir, const 
 				JANUS_LOG(LOG_VERB, "Old .mjr header format\n");
 				bytes = fread(prebuffer, sizeof(char), 5, file);
 				if(prebuffer[0] == 'v') {
-					JANUS_LOG(LOG_INFO, "This is an old video recording, assuming VP8\n");
+					JANUS_LOG(LOG_INFO, "This is an old video transcoding, assuming VP8\n");
 				} else if(prebuffer[0] == 'a') {
-					JANUS_LOG(LOG_INFO, "This is an old audio recording, assuming Opus\n");
+					JANUS_LOG(LOG_INFO, "This is an old audio transcoding, assuming Opus\n");
 				} else {
-					JANUS_LOG(LOG_WARN, "Unsupported recording media type...\n");
+					JANUS_LOG(LOG_WARN, "Unsupported transcoding media type...\n");
 					fclose(file);
 					return NULL;
 				}
@@ -2105,7 +2105,7 @@ janus_transcode_frame_packet *janus_transcode_get_frames(const char *dir, const 
 				/* Is it audio or video? */
 				json_t *type = json_object_get(info, "t");
 				if(!type || !json_is_string(type)) {
-					JANUS_LOG(LOG_WARN, "Missing/invalid recording type in info header...\n");
+					JANUS_LOG(LOG_WARN, "Missing/invalid transcoding type in info header...\n");
 					json_decref(info);
 					fclose(file);
 					return NULL;
@@ -2118,7 +2118,7 @@ janus_transcode_frame_packet *janus_transcode_get_frames(const char *dir, const 
 				} else if(!strcasecmp(t, "a")) {
 					video = 0;
 				} else {
-					JANUS_LOG(LOG_WARN, "Unsupported recording type '%s' in info header...\n", t);
+					JANUS_LOG(LOG_WARN, "Unsupported transcoding type '%s' in info header...\n", t);
 					json_decref(info);
 					fclose(file);
 					return NULL;
@@ -2126,7 +2126,7 @@ janus_transcode_frame_packet *janus_transcode_get_frames(const char *dir, const 
 				/* What codec was used? */
 				json_t *codec = json_object_get(info, "c");
 				if(!codec || !json_is_string(codec)) {
-					JANUS_LOG(LOG_WARN, "Missing recording codec in info header...\n");
+					JANUS_LOG(LOG_WARN, "Missing transcoding codec in info header...\n");
 					json_decref(info);
 					fclose(file);
 					return NULL;
@@ -2135,7 +2135,7 @@ janus_transcode_frame_packet *janus_transcode_get_frames(const char *dir, const 
 				/* When was the file created? */
 				json_t *created = json_object_get(info, "s");
 				if(!created || !json_is_integer(created)) {
-					JANUS_LOG(LOG_WARN, "Missing recording created time in info header...\n");
+					JANUS_LOG(LOG_WARN, "Missing transcoding created time in info header...\n");
 					json_decref(info);
 					fclose(file);
 					return NULL;
@@ -2144,14 +2144,14 @@ janus_transcode_frame_packet *janus_transcode_get_frames(const char *dir, const 
 				/* When was the first frame written? */
 				json_t *written = json_object_get(info, "u");
 				if(!written || !json_is_integer(written)) {
-					JANUS_LOG(LOG_WARN, "Missing recording written time in info header...\n");
+					JANUS_LOG(LOG_WARN, "Missing transcoding written time in info header...\n");
 					json_decref(info);
 					fclose(file);
 					return NULL;
 				}
 				w_time = json_integer_value(created);
 				/* Summary */
-				JANUS_LOG(LOG_VERB, "This is %s recording:\n", video ? "a video" : "an audio");
+				JANUS_LOG(LOG_VERB, "This is %s transcoding:\n", video ? "a video" : "an audio");
 				JANUS_LOG(LOG_VERB, "  -- Codec:   %s\n", c);
 				JANUS_LOG(LOG_VERB, "  -- Created: %"SCNi64"\n", c_time);
 				JANUS_LOG(LOG_VERB, "  -- Written: %"SCNi64"\n", w_time);
@@ -2328,14 +2328,14 @@ static void *janus_transcode_playout_thread(void *data) {
 		g_thread_unref(g_thread_self());
 		return NULL;
 	}
-	if(!session->recording) {
+	if(!session->transcoding) {
 		janus_refcount_decrease(&session->ref);
-		JANUS_LOG(LOG_ERR, "No recording object, can't start playout thread...\n");
+		JANUS_LOG(LOG_ERR, "No transcoding object, can't start playout thread...\n");
 		g_thread_unref(g_thread_self());
 		return NULL;
 	}
-	janus_refcount_increase(&session->recording->ref);
-	janus_transcode_recording *rec = session->recording;
+	janus_refcount_increase(&session->transcoding->ref);
+	janus_transcode_transcoding *rec = session->transcoding;
 	if(session->transcoder) {
 		janus_refcount_decrease(&rec->ref);
 		janus_refcount_decrease(&session->ref);
@@ -2400,8 +2400,8 @@ static void *janus_transcode_playout_thread(void *data) {
 	int bytes = 0;
 	int64_t ts_diff = 0, passed = 0;
 
-	int audio_pt = session->recording->audio_pt;
-	int video_pt = session->recording->video_pt;
+	int audio_pt = session->transcoding->audio_pt;
+	int video_pt = session->transcoding->video_pt;
 
 	int akhz = 48;
 	if(audio_pt == 0 || audio_pt == 8 || audio_pt == 9)
