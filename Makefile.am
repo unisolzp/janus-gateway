@@ -14,7 +14,7 @@ bin_PROGRAMS = janus
 
 headerdir = $(includedir)/janus
 header_HEADERS = apierror.h config.h log.h debug.h mutex.h record.h \
-	rtcp.h rtp.h rtmp.h rtpsrtp.h sdp-utils.h ip-utils.h utils.h refcount.h text2pcap.h
+	rtcp.h rtp.h transcode.h rtpsrtp.h sdp-utils.h ip-utils.h utils.h refcount.h text2pcap.h
 
 pluginsheaderdir = $(includedir)/janus/plugins
 pluginsheader_HEADERS = plugins/plugin.h
@@ -46,8 +46,8 @@ stream_DATA = $(NULL)
 recordingsdir = $(datadir)/janus/recordings
 recordings_DATA = $(NULL)
 
-rtmpdir = $(datadir)/janus/recordings
-rtmp_DATA = $(NULL)
+transcodingsdir = $(datadir)/janus/transcodings
+transcodings_DATA = $(NULL)
 
 luadir = $(datadir)/janus/lua
 lua_DATA = $(NULL)
@@ -69,7 +69,7 @@ jsmodules_DATA = html/janus.js
 	    s|[@]transportdir[@]|$(transportdir)|;\
 	    s|[@]eventdir[@]|$(eventdir)|;\
 	    s|[@]recordingsdir[@]|$(recordingsdir)|;\
-	    s|[@]rtmpdir[@]|$(rtmpdir)|;\
+	    s|[@]transcodingsdir[@]|$(transcodingsdir)|;\
 	    s|[@]demosdir[@]|$(demosdir)|;\
 	    s|[@]streamdir[@]|$(streamdir)|; \
 	    s|[@]luadir[@]|$(luadir)|; \
@@ -113,8 +113,8 @@ janus_SOURCES = \
 	rtcp.h \
 	rtp.c \
 	rtp.h \
-	rtmp.c \
-	rtmp.h \
+	transcode.c \
+	transcode.h \
 	rtpsrtp.h \
 	sctp.c \
 	sctp.h \
@@ -415,21 +415,21 @@ EXTRA_DIST += \
 CLEANFILES += conf/janus.plugin.recordplay.jcfg.sample
 endif
 
-if ENABLE_PLUGIN_RTMP
-plugin_LTLIBRARIES += plugins/libjanus_rtmp.la
-plugins_libjanus_rtmp_la_SOURCES = plugins/janus_rtmp.c
-plugins_libjanus_rtmp_la_CFLAGS = $(plugins_cflags)
-plugins_libjanus_rtmp_la_LDFLAGS = $(plugins_ldflags)
-plugins_libjanus_rtmp_la_LIBADD = $(plugins_libadd)
-conf_DATA += conf/janus.plugin.rtmp.jcfg.sample
-rtmp_DATA += \
-	plugins/rtmp/1234.nfo \
-	plugins/rtmp/rec-sample-audio.mjr \
-	plugins/rtmp/rec-sample-video.mjr
+if ENABLE_PLUGIN_TRANSCODE
+plugin_LTLIBRARIES += plugins/libjanus_transcode.la
+plugins_libjanus_transcode_la_SOURCES = plugins/janus_transcode.c
+plugins_libjanus_transcode_la_CFLAGS = $(plugins_cflags)
+plugins_libjanus_transcode_la_LDFLAGS = $(plugins_ldflags)
+plugins_libjanus_transcode_la_LIBADD = $(plugins_libadd)
+conf_DATA += conf/janus.plugin.transcode.jcfg.sample
+transcodings_DATA += \
+	plugins/transcoding/1234.nfo \
+	plugins/transcoding/transcoding-sample-audio.mjr \
+	plugins/transcoding/transcoding-sample-video.mjr
 EXTRA_DIST += \
-	conf/janus.plugin.rtmp.jcfg.sample.in \
-	$(rtmp_DATA)
-CLEANFILES += conf/janus.plugin.rtmp.jcfg.sample
+	conf/janus.plugin.transcode.jcfg.sample.in \
+	$(transcoding_DATA)
+CLEANFILES += conf/janus.plugin.transcode.jcfg.sample
 endif
 
 if ENABLE_PLUGIN_SIP
