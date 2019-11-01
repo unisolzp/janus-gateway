@@ -1,0 +1,8 @@
+# path = where to place recordings in the file system
+# events = true|false, whether events should be sent to event handlers
+
+general: {
+	rtmp = "rtmp://localhost:1935/live"
+	path = "@rtmpdir@"
+	#events = false
+}
